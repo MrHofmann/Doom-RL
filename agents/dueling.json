@@ -1,0 +1,31 @@
+{
+  "network_args": {
+    "ddqn": true,
+    "learning_rate": 0.00025,
+    "gamma": 1.0,
+    "nstep": 1
+  },
+  "agent_type": "dueling",
+  "reshaped_x": 84,
+  "reshaped_y": 84,
+  "skiprate": 3,
+  "remember_n_actions": 4,
+  "one_hot_nactions": true,
+  "history_length": 4,
+  "melt_interval": 10000,
+  "epsilon_decay_steps": 500000,
+  "epsilon_decay_start_step": 0,
+  "start_epsilon": 1.0,
+  "end_epsilon": 0.005,
+  "update_pattern": [
+    4,
+    1
+  ],
+  "backprop_start_step": 10000,
+  "replay_memory_size": 50000,
+
+  "batchsize": 64,
+  "name": "dueling",
+
+  "use_game_variables": true
+}
