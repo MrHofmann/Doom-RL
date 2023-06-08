@@ -3,7 +3,10 @@
     "ddqn": true,
     "learning_rate": 0.00025,
     "gamma": 1.0,
-    "nstep": 4
+    "nstep": 4,
+
+    "dueling": true,
+    "noisy": false
   },
   "agent_type": "integrated",
   "reshaped_x": 84,

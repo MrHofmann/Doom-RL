@@ -92,6 +92,7 @@ def main():
         engine_args["results_file"] = None
         engine_args["params_file"] = None
         engine_args["actions"] = None
+        engine_args["backprop_start_step"] = FLAGS.backprop_start_step
         engine = RLEngine(**engine_args)
         
         results, epoch, overall_start, best_results_so_far = init_results(engine.setup)
@@ -237,6 +238,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=np.inf)
     parser.add_argument('--training-steps-per-epoch', type=int, default=200000)
     parser.add_argument('--test-episodes-per-epoch', type=int, default=300)
+    parser.add_argument('--backprop-start-step', type=int, default=10000)
 
     FLAGS, unparsed = parser.parse_known_args()
     main()

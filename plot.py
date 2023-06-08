@@ -24,11 +24,13 @@ def marker():
 
 def color():
     colors = ["gray", 
-            #"tomato", 
+            "tomato", 
             "orange", 
-            #"gold", 
+            "gold", 
             "limegreen", 
-            #"blue", "darkviolet", 
+            "blue", 
+            "darkviolet",
+            "black",
             "ivory"]
     colors1 = ["gray",
             "goldenrod",
@@ -50,13 +52,14 @@ def color():
 
 def label():
     labels = ["DQN", 
-            #"DoubleDQN", 
+            "DoubleDQN", 
             "DuelingDQN", 
-            #"NStepDQN", 
+            "NStepDQN", 
             "PrioritizedDQN", 
-            #"NoisyDQN", "DistributionalDQN",
+            "CategoricalDQN",
+            "NoisyDQN",
             "AdvancedDQN",
-            "NDouble"]
+            "RainbowDQN"]
     labels_s = ["DQN", 
             #"DvostrukaDQN", 
             "DuelingDQN", 
@@ -91,7 +94,7 @@ def label():
             "NaprednaDQN"]
 
     while True:
-        for l in labels_s:
+        for l in labels:
             yield l
 
 def width():
@@ -100,7 +103,9 @@ def width():
             1.5, 
             1.5, 
             1.5,
-            #1.5, 1.5,
+            1.5, 
+            1.5,
+            1.5,
             3.0]
     widths2 = [1.5, 
             1.5, 

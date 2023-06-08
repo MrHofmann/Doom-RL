@@ -115,6 +115,7 @@ class SumTree(object):
         #    self.data_pointer = 0
 
     def update(self, tree_idx, p):
+        #print(tree_idx, p)
         change = p - self.tree[tree_idx]
         self.tree[tree_idx] = p
         # then propagate the change through tree
@@ -250,6 +251,7 @@ class PrioritizedReplay(object):  # stored as ( s, a, r, s_ ) in SumTree
         if self.data_pointer >= self._capacity:  # replace when exceed the capacity
             self.data_pointer = 0
 
+    # Remove n from argument list. Replace with self.batch_size
     def get_sample(self, n):
         #b_idx, b_memory, ISWeights = np.empty((n,), dtype=np.int32), np.empty((n, self.tree.data[0].size)), np.empty((n, 1))
         b_idx, indexes, ISWeights = np.empty((n,), dtype=np.int32), np.empty((n,), dtype=np.int32), np.empty((n,))
@@ -270,6 +272,7 @@ class PrioritizedReplay(object):  # stored as ( s, a, r, s_ ) in SumTree
         #print("min_prob ", min_prob)
         for i in range(n):
             a, b = pri_seg * i, pri_seg * (i + 1)
+            #print(a, b, n, pri_seg, self.tree.total_p)
             v = np.random.uniform(a, b)
             #idx, p, data = self.tree.get_leaf(v)
             idx, p, data_idx = self.tree.get_leaf(v)

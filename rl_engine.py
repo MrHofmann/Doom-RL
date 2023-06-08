@@ -41,6 +41,7 @@ class RLEngine:
         self.agent_type = kwargs["agent_type"]
         self.gamma = network_args["gamma"]
         self.nstep = network_args["nstep"]
+        #self.noisy_net = network_args["noisy"]
         #self.last_shaping_reward = 0
         #self.shaping_on = shaping_on
         self.training_mode = True
@@ -68,9 +69,12 @@ class RLEngine:
         state_format = dict()
         state_format["s_img"] = img_shape
         state_format["s_misc"] = total_misc_len
-        network_args = kwargs["network_args"]
+        #network_args = kwargs["network_args"]
         network_args["state_format"] = state_format
         network_args["actions_number"] = len(self.actions)
+        #network_args["atoms_number"] = kwargs["num_atoms"]
+        #network_args["v_min"] = kwargs["v_min"]
+        #network_args["v_max"] = kwargs["v_max"]
         replay_memory_size = kwargs["replay_memory_size"]
         batchsize = kwargs["batchsize"]
         self._agent_init(state_format, network_args, kwargs["replay_memory_size"], kwargs["batchsize"])
@@ -214,8 +218,17 @@ class RLEngine:
         elif self.agent_type == "nstep":
             self.approximator = approximator.NStepDQN(**network_args)
             self.replay_memory = UniformReplay(state_format, replay_memory_size, batchsize)
+        elif self.agent_type == "categorical":
+            self.approximator = approximator.CategoricalDQN(**network_args)
+            self.replay_memory = UniformReplay(state_format, replay_memory_size, batchsize)
+        elif self.agent_type == "noisy":
+            self.approximator = approximator.NoisyDQN(**network_args)
+            self.replay_memory = UniformReplay(state_format, replay_memory_size, batchsize)
         elif self.agent_type == "integrated":
             self.approximator = approximator.IntegratedDQN(**network_args)
+            self.replay_memory = PrioritizedReplay(state_format, replay_memory_size, batchsize)
+        elif self.agent_type == "rainbow":
+            self.approximator = approximator.RainbowDQN(**network_args)
             self.replay_memory = PrioritizedReplay(state_format, replay_memory_size, batchsize)
         elif self.agent_type == "ndouble":
             self.approximator = approximator.NDoubleDQN(**network_args)
@@ -361,7 +374,7 @@ class RLEngine:
 
         # This is ok, but should be part of a policy function.
         # With probability epsilon choose a random action:
-        if self.epsilon >= random.random():
+        if self.agent_type != "noisy" and self.epsilon >= random.random():
             a = random.randint(0, len(self.actions) - 1)
         else:
             a = self.approximator.estimate_best_action(self.last_state)
@@ -388,7 +401,7 @@ class RLEngine:
 
         # This is ok, but should be part of a policy function.
         # With probability epsilon choose a random action:
-        if self.epsilon >= random.random():
+        if self.agent_type != "noisy" and self.epsilon >= random.random():
             a = random.randint(0, len(self.actions) - 1)
         else:
             a = self.approximator.estimate_best_action(self.last_state)
@@ -501,7 +514,7 @@ class RLEngine:
         s = self._current_state_copy();
 
         # With probability epsilon choose a random action:
-        if self.epsilon >= random.random():
+        if self.agent_type != "noisy" and self.epsilon >= random.random():
             a = random.randint(0, len(self.actions) - 1)
         else:
             a = self.approximator.estimate_best_action(s)
@@ -558,7 +571,8 @@ class RLEngine:
         # Perform q-learning once for a while
         if self.replay_memory.size >= self.backprop_start_step and self.steps % self.update_pattern[0] == 0:
             for a in range(self.update_pattern[1]):
-                if self.agent_type in ["prioritized", "integrated", "ndouble", "ndueling", "nnstep"]:
+                if self.agent_type in ["prioritized", "integrated", "rainbow", "ndouble", "ndueling", "nnstep"]:
+                    # Remove self.batchsize from arguments, as for uniform replay in else.
                     b_idx, transitions, ISWeights = self.replay_memory.get_sample(self.batchsize)
                     abs_errors = self.approximator.learn(transitions, ISWeights)
                     self.replay_memory.batch_update(b_idx, abs_errors)

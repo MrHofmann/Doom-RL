@@ -3,12 +3,16 @@
     "ddqn": true,
     "learning_rate": 0.00025,
     "gamma": 1.0,
-    "nstep": 4,
+    "nstep": 1,
+ 
+    "dueling": false,
+    "noisy": true,
 
-    "dueling": true,
-    "noisy": false
+    "atoms_number": 51,
+    "v_min": -10,
+    "v_max": 10
   },
-  "agent_type": "nprioritized",
+  "agent_type": "noisy",
   "reshaped_x": 84,
   "reshaped_y": 84,
   "skiprate": 3,
@@ -28,7 +32,7 @@
   "replay_memory_size": 50000,
 
   "batchsize": 64,
-  "name": "nprioritized",
+  "name": "noisy",
 
   "use_game_variables": true
 }
