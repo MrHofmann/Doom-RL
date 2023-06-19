@@ -412,7 +412,7 @@ class RLEngine:
 
         # This is ok, but should be part of a policy function.
         # With probability epsilon choose a random action:
-        if self.agent_type == "noisy" and elf.epsilon >= random.random():
+        if self.agent_type != "noisy" and elf.epsilon >= random.random():
             a = random.randint(0, len(self.actions) - 1)
         else:
             a = self.approximator.estimate_best_action(self.last_state)
@@ -439,7 +439,7 @@ class RLEngine:
 
         # This is ok, but should be part of a policy function.
         # With probability epsilon choose a random action:
-        if self.agent_type == "noisy" and self.epsilon >= random.random():
+        if self.agent_type != "noisy" and self.epsilon >= random.random():
             a = random.randint(0, len(self.actions) - 1)
         else:
             a = self.approximator.estimate_best_action(self.last_state)
