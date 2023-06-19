@@ -335,6 +335,44 @@ class RLEngine:
                 self.set_last_action(0)
                 self.last_n_actions.fill(0)
 
+    def add_transition(self, s, a, r, s2, t):
+        # Case when s2 is terminal in first four steps is not covered but shouldn't appear anyway.
+        #print(self.r_n)
+        if self.nstep == 1:
+            self.replay_memory.add_transition(s, a, s2, r, t)
+        # Append first four steps in episode because buffers are empty.
+        elif len(self.r_n) < self.nstep - 1:
+            self.s_n.append(s)
+            self.a_n.append(a)
+            self.r_n.append(r)
+            self.s2_n.append(s2)
+            self.t_n.append(t)
+            #print("Here 0", r)
+        elif s2 is None:
+            #print("Here 1", r)
+            idx = (self.steps-1) % (self.nstep - 1)
+            for i in range(self.nstep - 1):
+                r_t = r
+                for j in range(1, self.nstep - i):
+                    r_t = self.r_n[idx-j] + self.gamma*r_t
+                    #print("Here 1.1", self.r_n)
+                idx_t = (idx + i) % (self.nstep - 1)
+                self.replay_memory.add_transition(self.s_n[idx_t], self.a_n[idx_t], s2, r_t, t)
+            self.replay_memory.add_transition(s, a, s2, r, t)
+        # Add \gamma^n to target update as well
+        else:
+            #print("Here 2", r)
+            idx = (self.steps-1) % (self.nstep - 1)
+            r_t = r
+            for i in range(self.nstep - 1):
+                r_t = self.r_n[idx-(i+1)] + self.gamma*r_t
+            self.replay_memory.add_transition(self.s_n[idx], self.a_n[idx], s2, r_t, t)
+            self.s_n[idx] = s
+            self.a_n[idx] = a
+            self.r_n[idx] = r
+            self.s2_n[idx] = s2
+            self.t_n[idx] = t
+
     def make_step(self):
         self._update_state()
         # TODO Check if not making the copy still works
@@ -374,7 +412,7 @@ class RLEngine:
 
         # This is ok, but should be part of a policy function.
         # With probability epsilon choose a random action:
-        if self.agent_type != "noisy" and self.epsilon >= random.random():
+        if self.agent_type == "noisy" and elf.epsilon >= random.random():
             a = random.randint(0, len(self.actions) - 1)
         else:
             a = self.approximator.estimate_best_action(self.last_state)
@@ -401,7 +439,7 @@ class RLEngine:
 
         # This is ok, but should be part of a policy function.
         # With probability epsilon choose a random action:
-        if self.agent_type != "noisy" and self.epsilon >= random.random():
+        if self.agent_type == "noisy" and self.epsilon >= random.random():
             a = random.randint(0, len(self.actions) - 1)
         else:
             a = self.approximator.estimate_best_action(self.last_state)
@@ -541,32 +579,7 @@ class RLEngine:
             self._update_state()
             s2 = self._current_state()
             t = False
-
-        if len(self.r_n) < self.nstep:
-            self.s_n.append(s)
-            self.a_n.append(a)
-            self.r_n.append(r)
-            self.s2_n.append(s2)
-            self.t_n.append(t)
-        elif s2 is None:
-            idx = (self.steps-1) % self.nstep
-            for i in range(self.nstep):
-                r_t = 0.0
-                for j in range(i, self.nstep):
-                    r_t = self.r_n[idx-(j+1)] + self.gamma*r_t
-                    self.replay_memory.add_transition(self.s_n[idx-(j+1)], self.a_n[idx-(j+1)], s2, r_t, t)
-        # Add \gamma^n to target update as well
-        else:
-            idx = (self.steps-1) % self.nstep
-            r_t = 0.0
-            for i in range(self.nstep):
-                r_t = self.r_n[idx-(i+1)] + self.gamma*r_t
-            self.replay_memory.add_transition(self.s_n[idx], self.a_n[idx], s2, r_t, t)
-            self.s_n[idx] = s
-            self.a_n[idx] = a
-            self.r_n[idx] = r
-            self.s2_n[idx] = s2
-            self.t_n[idx] = t
+        self.add_transition(s, a, r, s2, t)
         
         # Perform q-learning once for a while
         if self.replay_memory.size >= self.backprop_start_step and self.steps % self.update_pattern[0] == 0:
@@ -660,39 +673,38 @@ class RLEngine:
     @staticmethod
     def load(filename, game=None, config_file=None, quiet=False):
         if not quiet:
-            print("Loading qengine from " + filename + "...")
+            print("Loading engine from " + filename + "...")
 
         params = pickle.load(open(filename, "rb"))
 
-        qengine_args = params[0]
+        engine_args = params[0]
         network_weights = params[1]
 
-        steps = qengine_args["steps"]
-        epsilon = qengine_args["epsilon"]
-        del (qengine_args["epsilon"])
-        del (qengine_args["steps"])
+        steps = engine_args["steps"]
+        epsilon = engine_args["epsilon"]
+        del (engine_args["epsilon"])
+        del (engine_args["steps"])
         if game is None:
             if config_file is not None:
-                game = initialize_doom(config_file)
-                qengine_args["config_file"] = config_file
-            elif "config_file" in qengine_args and qengine_args["config_file"] is not None:
-                game = initialize_doom(qengine_args["config_file"])
-            else:
-                raise Exception("No game, no config file. Dunno how to initialize doom.")
+                #game = initialize_doom(config_file)
+                engine_args["config_file"] = config_file
+            #elif "config_file" in engine_args and engine_args["config_file"] is not None:
+                #game = initialize_doom(engine_args["config_file"])
+            elif "config_file" not in engine_args or engine_args["config_file"] is None:
+                raise Exception("No game or config file specified.")
         else:
-            qengine_args["config_file"] = None
+            engine_args["config_file"] = None
 
-        qengine_args["game"] = game
-        qengine = QEngine(**qengine_args)
-        qengine.approximator.network.load_state_dict(network_weights)
-        qengine.approximator.frozen_network.load_state_dict(network_weights)
-
+        engine_args["game"] = game
+        engine = RLEngine(**engine_args)
+        engine.approximator.network.load_state_dict(network_weights)
+        engine.approximator.frozen_network.load_state_dict(network_weights)
 
         if not quiet:
             print("Loading finished.")
-            qengine.steps = steps
-            qengine.epsilon = epsilon
-        return qengine
+            engine.steps = steps
+            engine.epsilon = epsilon
+        return engine
 
     # Saves the whole engine with params to a file
     def save(self, filename=None, quiet=False):

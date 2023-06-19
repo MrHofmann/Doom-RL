@@ -267,86 +267,6 @@ class ActionCategoricalNetwork(nn.Module):
         x = F.softmax(x.view(-1, self.num_atoms)).view(-1, self.num_actions, self.num_atoms)
         return x
 
-
-#class DuelingActionValueNetwork(nn.Module):
-#    def __init__(self, img_input_shape, output_size, ddqn=False, noisy=False):
-#        super(DuelingActionValueNetwork, self).__init__()
-#        
-#        # Input size with batch is [64, 4, 84, 84].
-#        self.conv1 = nn.Sequential(
-#            nn.Conv2d(4, 32, kernel_size=8, stride=4, bias=True),
-#            ##nn.BatchNorm2d(32),
-#            nn.ReLU()
-#            )
-#
-#        # After conv1 [64, 32, 20, 20]
-#        self.conv2 = nn.Sequential(
-#            nn.Conv2d(32, 64, kernel_size=4, stride=2, bias=True),
-#            #nn.BatchNorm2d(64),
-#            nn.ReLU()
-#            )
-#                
-#        # After conv2 [64, 64, 9, 9]
-#        self.conv3 = nn.Sequential(
-#            nn.Conv2d(64, 64, kernel_size=3, stride=1, bias=True),
-#            #nn.BatchNorm2d(64),
-#            nn.ReLU()
-#            )        
-#        
-#        if noisy:
-#            self.advantage_fc = nn.Sequential(
-#                NoisyLinear(3172, 256),
-#                nn.ReLU(),
-#                NoisyLinear(256, output_size)
-#                )
-#
-#            self.state_fc = nn.Sequential(
-#                NoisyLinear(3172, 256),
-#                nn.ReLU(),
-#                NoisyLinear(256, 1)
-#                )
-#        else:
-#            self.advantage_fc = nn.Sequential(
-#                nn.Linear(3172, 256, bias=True),
-#                #nn.Linear(1586, 256, bias=True),
-#                nn.ReLU(),
-#                nn.Linear(256, output_size, bias=True)
-#                )
-#
-#            self.state_fc = nn.Sequential(
-#                nn.Linear(3172, 256, bias=True),
-#                #nn.Linear(1586, 256, bias=True),
-#                nn.ReLU(),
-#                nn.Linear(256, 1, bias=True)
-#                )
-#
-#            #self.out = nn.Sequential(nn.Linear(512, output_size, bias=True))
-#    
-#    #def reset_noise(self):
-#    #    self.noisy1.reset_noise()
-#    #    self.noisy2.reset_noise()
-#
-#    def forward(self, x, misc=None): 
-#        x = self.conv1(x)
-#        x = self.conv2(x)
-#        x = self.conv3(x)
-#        #x = torch.cat((x.view(-1, 3136), misc), dim=1)
-#        ##x = self.fc1(x)
-#        ##x = self.out(x)
-#        #x1 = x[:, :1586]
-#        #x2 = x[:, 1586:]
-#        #state_value = self.state_fc(x1).reshape(-1, 1)
-#        #advantage_values = self.advantage_fc(x2)
-#        #x = state_value + (advantage_values - advantage_values.mean(dim=1).reshape(-1, 1))
-#
-#        x = torch.cat((x.view(x.size(0), -1), misc), dim=1)
-#        state_value = self.state_fc(x)
-#        advantage_values = self.advantage_fc(x)
-#        x = state_value + (advantage_values - advantage_values.mean(dim=1).reshape(-1, 1))
-#
-#        #print(x)
-#        return x
-
 class ActionValueNetwork(nn.Module):
     def __init__(self, img_input_shape, output_size, ddqn=False, dueling=False, noisy=False):
         super(ActionValueNetwork, self).__init__()
@@ -626,27 +546,25 @@ class DoubleDQN(DQN):
             a = torch.from_numpy(t["a"]).long().to(DEVICE)
             r = torch.from_numpy(t["r"]).float().to(DEVICE)
             nonterminal = torch.from_numpy(t["nonterminal"].astype(np.uint8)).float().to(DEVICE)
-
-            q = self.network(s1_img, s1_misc)
+            
             #with torch.no_grad():
             q2 = self.network(s2_img, s2_misc)
             q2_action_ref = torch.argmax(q2, dim=1)
             
+            q = self.network(s1_img, s1_misc)
             q2_frozen = self.frozen_network(s2_img, s2_misc)
             q2_max = q2_frozen[torch.arange(q2_action_ref.shape[0]), q2_action_ref]
 
             target_q = (r + self.gamma * nonterminal * q2_max).to(DEVICE)
             predicted_q = (q[torch.arange(q.shape[0]), a]).to(DEVICE)
 
-            #q_values      = current_model(state)
-            #next_q_values = current_model(next_state)
-            #next_q_state_values = target_model(next_state) 
-            #
-            #q_value       = q_values.gather(1, action.unsqueeze(1)).squeeze(1) 
-            #next_q_value = next_q_state_values.gather(1, torch.max(next_q_values, 1)[1].unsqueeze(1)).squeeze(1)
-            #expected_q_value = reward + gamma * next_q_value * (1 - done)
-            # 
-            #loss = (q_value - Variable(expected_q_value.data)).pow(2).mean()
+            #q = self.network(s1_img, s1_misc)
+            #q2 = self.network(s2_img, s2_misc)
+            #q3 = self.frozen_network(s2_img, s2_misc)
+            #predicted_q = q.gather(1, a.unsqueeze(1)).squeeze(1)
+            #q2_values = q3.gather(1, torch.max(q2, 1)[1].unsqueeze(1)).squeeze(1)
+            #target_q = (r + self.gamma * nonterminal * q2_values)
+            ##loss = (target_q - predicted_q).pow(2).mean()
 
             self.optimizer.zero_grad()
             td_error = self.criterion(predicted_q, target_q)
